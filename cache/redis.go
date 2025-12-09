@@ -113,8 +113,11 @@ const (
 	CategoryKeyPrefix    = "category:"
 	CategoryListKey      = "categories:list"
 	CategorySearchKey    = "categories:search:"
-	UserKeyPrefix       = "user:"
+	UserKeyPrefix        = "user:"
 	UserProfileKeyPrefix = "user:profile:"
+	ProductKeyPrefix     = "product:"
+	ProductListKey       = "products:list"
+	ProductSearchKey     = "products:search:"
 )
 
 // Helper functions để tạo cache keys
@@ -130,3 +133,6 @@ func UserProfileKey(id uint) string {
 	return fmt.Sprintf("%s%d", UserProfileKeyPrefix, id)
 }
 
+func ProductKey(id uint) string {
+	return fmt.Sprintf("%s%d", ProductKeyPrefix, id)
+}

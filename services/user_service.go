@@ -230,7 +230,7 @@ func (s *UserService) Search(req dto.SearchUserRequest) (*dto.PaginationResponse
 	sortBy := "createdAt"
 	sortOrder := "DESC"
 	page := 1
-	limit := 50
+	limit := 10
 
 	if req.SortBy != nil {
 		sortBy = *req.SortBy

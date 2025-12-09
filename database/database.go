@@ -81,6 +81,7 @@ func AutoMigrate() error {
 	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Category{},
+		&models.CategoryChild{}, // Bảng lưu quan hệ parent-child
 		&models.Product{},
 		&models.CartItem{},
 		&models.Address{},
@@ -93,6 +94,40 @@ func AutoMigrate() error {
 		// &models.Chat{},
 		// &models.ChatMessage{},
 	)
+
+	// Tạo unique indexes với filter soft-deleted records
+	if err == nil {
+		// Drop unique index cũ nếu có (GORM tạo mặc định không filter deleted_at)
+		if dropErr := DB.Exec(`DROP INDEX IF EXISTS idx_categories_name`).Error; dropErr != nil {
+			log.Printf("⚠️  Warning: Failed to drop old index idx_categories_name: %v", dropErr)
+		}
+		if dropErr := DB.Exec(`DROP INDEX IF EXISTS categories_name_key`).Error; dropErr != nil {
+			log.Printf("⚠️  Warning: Failed to drop old index categories_name_key: %v", dropErr)
+		}
+		if dropErr := DB.Exec(`DROP INDEX IF EXISTS categories_name_idx`).Error; dropErr != nil {
+			log.Printf("⚠️  Warning: Failed to drop old index categories_name_idx: %v", dropErr)
+		}
+
+		// Tạo unique index cho category name với filter soft-deleted
+		if indexErr := DB.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_unique 
+			ON categories(name) 
+			WHERE deleted_at IS NULL
+		`).Error; indexErr != nil {
+			log.Printf("❌ Error: Failed to create unique index idx_categories_name_unique: %v", indexErr)
+			return fmt.Errorf("failed to create unique index for category name: %w", indexErr)
+		}
+
+		// Tạo unique index để đảm bảo một child chỉ có thể thuộc về một parent
+		if indexErr := DB.Exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_category_children_child_id_unique 
+			ON category_children(child_id) 
+			WHERE deleted_at IS NULL
+		`).Error; indexErr != nil {
+			log.Printf("❌ Error: Failed to create unique index idx_category_children_child_id_unique: %v", indexErr)
+			return fmt.Errorf("failed to create unique index for category_children: %w", indexErr)
+		}
+	}
 
 	if err != nil {
 		return fmt.Errorf("auto migrate failed: %w", err)

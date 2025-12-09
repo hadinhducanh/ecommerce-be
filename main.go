@@ -6,6 +6,7 @@ import (
 	"ecommerce-be/cache"
 	"ecommerce-be/config"
 	"ecommerce-be/database"
+	"ecommerce-be/middleware"
 	"ecommerce-be/routes"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,9 @@ func main() {
 
 	// Setup Gin router
 	r := gin.Default()
+
+	// CORS middleware - cho phép frontend truy cập
+	r.Use(middleware.CORSMiddleware())
 
 	// Setup all routes
 	routes.SetupRoutes(r)

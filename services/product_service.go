@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"ecommerce-be/cache"
 	"ecommerce-be/database"
@@ -85,7 +86,7 @@ func (s *ProductService) Search(req dto.SearchProductRequest, language string) (
 	sortBy := "createdAt"
 	sortOrder := "DESC"
 	page := 1
-	limit := 50
+	limit := 10
 
 	if req.SortBy != nil {
 		sortBy = *req.SortBy
@@ -275,13 +276,24 @@ func (s *ProductService) Search(req dto.SearchProductRequest, language string) (
 
 // FindOne lấy một product theo ID
 func (s *ProductService) FindOne(id uint, includeInactive bool, language string) (*models.Product, error) {
+	// Tạo cache key
+	cacheKey := fmt.Sprintf("%s%d:%v:%s", cache.ProductKeyPrefix, id, includeInactive, language)
+
+	// Thử lấy từ cache
+	var product models.Product
+	if cache.RedisClient != nil {
+		if err := cache.Get(cacheKey, &product); err == nil {
+			return &product, nil
+		}
+	}
+
+	// Nếu không có trong cache, lấy từ database
 	query := database.DB.Where("id = ?", id).Preload("Category")
 
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}
 
-	var product models.Product
 	if err := query.First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("không tìm thấy sản phẩm với ID %d", id)
@@ -292,6 +304,11 @@ func (s *ProductService) FindOne(id uint, includeInactive bool, language string)
 	// Transform với language nếu có
 	if language == "en" || language == "vi" {
 		product = s.transformProduct(product, language)
+	}
+
+	// Lưu vào cache (10 phút)
+	if cache.RedisClient != nil {
+		cache.Set(cacheKey, product, 10*time.Minute)
 	}
 
 	return &product, nil
@@ -408,6 +425,7 @@ func (s *ProductService) Update(id uint, req interface{}) (*models.Product, erro
 
 	// Invalidate cache
 	s.invalidateProductCache()
+	s.invalidateProductCacheByID(id)
 
 	return &product, nil
 }
@@ -437,6 +455,7 @@ func (s *ProductService) Remove(id uint) error {
 
 	// Invalidate cache
 	s.invalidateProductCache()
+	s.invalidateProductCacheByID(id)
 
 	return nil
 }
@@ -470,6 +489,7 @@ func (s *ProductService) HardDelete(id uint) error {
 
 	// Invalidate cache
 	s.invalidateProductCache()
+	s.invalidateProductCacheByID(id)
 
 	return nil
 }
@@ -516,5 +536,15 @@ func (s *ProductService) invalidateProductCache() {
 	if cache.RedisClient == nil {
 		return
 	}
-	cache.DeletePattern("products:*")
+	// Xóa tất cả keys bắt đầu bằng "product:"
+	cache.DeletePattern(cache.ProductKeyPrefix + "*")
+}
+
+// invalidateProductCacheByID xóa cache của một product cụ thể
+func (s *ProductService) invalidateProductCacheByID(id uint) {
+	if cache.RedisClient == nil {
+		return
+	}
+	// Xóa cache của product này (tất cả các language và includeInactive variants)
+	cache.DeletePattern(fmt.Sprintf("%s%d:*", cache.ProductKeyPrefix, id))
 }
