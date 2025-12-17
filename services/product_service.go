@@ -135,9 +135,29 @@ func (s *ProductService) Search(req dto.SearchProductRequest, language string) (
 		}
 	}
 
-	// Filter theo categoryId (exact match)
+	// Filter theo categoryId (exact match) - ưu tiên nếu có cả categoryId và parentCategoryId
 	if req.CategoryID != nil {
 		query = query.Where("category_id = ?", *req.CategoryID)
+	} else if req.ParentCategoryID != nil {
+		// Filter theo parent category - lấy tất cả sản phẩm của các danh mục con
+		// Bước 1: Lấy tất cả child categories của parent category
+		var relations []models.CategoryChild
+		if err := database.DB.Where("parent_id = ? AND deleted_at IS NULL", *req.ParentCategoryID).Find(&relations).Error; err != nil {
+			return nil, errors.New("không thể lấy danh sách danh mục con")
+		}
+
+		if len(relations) == 0 {
+			// Không có child categories nào → không có sản phẩm nào
+			query = query.Where("1 = 0") // Always false condition
+		} else {
+			// Lấy danh sách ID các child categories
+			childIDs := make([]uint, len(relations))
+			for i, rel := range relations {
+				childIDs[i] = rel.ChildID
+			}
+			// Filter products theo các child categories
+			query = query.Where("category_id IN ?", childIDs)
+		}
 	}
 
 	// Filter theo isActive (hỗ trợ boolean hoặc array)

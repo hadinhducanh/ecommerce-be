@@ -43,16 +43,17 @@ type UpdateProductFullRequest struct {
 }
 
 type SearchProductRequest struct {
-	Name      *string     `json:"name"` // Search (partial match), không phải filter exact
-	CategoryID *uint      `json:"categoryId"` // Filter (exact match)
-	IsActive  interface{} `json:"isActive"` // *bool hoặc []bool - true = active, false = inactive, nil = all, [true, false] = all
-	MinPrice  *float64    `json:"minPrice" binding:"omitempty,min=0"` // Filter (>=)
-	MaxPrice  *float64    `json:"maxPrice" binding:"omitempty,min=0"` // Filter (<=)
-	InStock   *bool       `json:"inStock"` // true = chỉ lấy sản phẩm còn hàng (stock > 0)
-	SortBy    *string     `json:"sortBy" binding:"omitempty,oneof=id name price stock createdAt updatedAt"`
-	SortOrder *string     `json:"sortOrder" binding:"omitempty,oneof=ASC DESC"`
-	Page      *int        `json:"page" binding:"omitempty,min=1"`
-	Limit     *int        `json:"limit" binding:"omitempty,min=1,max=1000"`
+	Name           *string     `json:"name"` // Search (partial match), không phải filter exact
+	CategoryID      *uint       `json:"categoryId"` // Filter (exact match) - ưu tiên nếu có cả categoryId và parentCategoryId
+	ParentCategoryID *uint      `json:"parentCategoryId"` // Filter theo danh mục cha - lấy tất cả sản phẩm của các danh mục con
+	IsActive       interface{} `json:"isActive"` // *bool hoặc []bool - true = active, false = inactive, nil = all, [true, false] = all
+	MinPrice       *float64    `json:"minPrice" binding:"omitempty,min=0"` // Filter (>=)
+	MaxPrice       *float64    `json:"maxPrice" binding:"omitempty,min=0"` // Filter (<=)
+	InStock        *bool       `json:"inStock"` // true = chỉ lấy sản phẩm còn hàng (stock > 0)
+	SortBy         *string     `json:"sortBy" binding:"omitempty,oneof=id name price stock createdAt updatedAt"`
+	SortOrder      *string     `json:"sortOrder" binding:"omitempty,oneof=ASC DESC"`
+	Page           *int        `json:"page" binding:"omitempty,min=1"`
+	Limit          *int        `json:"limit" binding:"omitempty,min=1,max=1000"`
 }
 
 type ProductResponse struct {

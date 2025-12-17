@@ -1154,6 +1154,258 @@ const buildTree = (categories) => {
 const categoryTree = buildTree(allCategories);
 ```
 
+### 8. Filter Products theo Parent Category
+
+**Endpoint:** `POST /api/v1/products/search`
+
+**Mục đích:** Lấy tất cả sản phẩm thuộc các child categories của một parent category. Ví dụ: Filter theo "Điện thoại" (parent) sẽ trả về tất cả sản phẩm của iPhone, Samsung, Xiaomi, OPPO, ... (các children).
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Query Parameters:**
+- `language`: `vi` (mặc định) hoặc `en` - Ngôn ngữ hiển thị
+
+**Request Body:**
+```json
+{
+  "parentCategoryId": 1,        // Required: ID của parent category (ví dụ: "Điện thoại")
+  "name": "iPhone",              // Optional: Tìm kiếm theo tên sản phẩm (partial match)
+  "isActive": true,              // Optional: true, false, hoặc [true, false] để lấy tất cả
+  "minPrice": 1000000,           // Optional: Giá tối thiểu (>=)
+  "maxPrice": 50000000,          // Optional: Giá tối đa (<=)
+  "inStock": true,               // Optional: true = chỉ lấy sản phẩm còn hàng
+  "sortBy": "price",             // Optional: id, name, price, stock, createdAt, updatedAt
+  "sortOrder": "ASC",            // Optional: ASC, DESC
+  "page": 1,                     // Optional: Mặc định 1
+  "limit": 10                    // Optional: Mặc định 10, tối đa 1000
+}
+```
+
+**Lưu ý quan trọng:**
+- Nếu truyền cả `categoryId` và `parentCategoryId`, hệ thống sẽ **ưu tiên `categoryId`** (filter cụ thể hơn)
+- Nếu parent category không có child categories nào → trả về empty result
+- Filter `parentCategoryId` sẽ tự động lấy tất cả child categories của parent và filter products theo các child categories đó
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tìm kiếm sản phẩm thành công",
+  "data": [
+    {
+      "id": 1,
+      "name": "iPhone 15 Pro Max 256GB",
+      "nameEn": "iPhone 15 Pro Max 256GB",
+      "price": 32990000,
+      "stock": 50,
+      "categoryId": 3,
+      "category": {
+        "id": 3,
+        "name": "iPhone",
+        "nameEn": "iPhone",
+        "parentId": 1,
+        "childrenIds": []
+      },
+      "isActive": true,
+      ...
+    },
+    {
+      "id": 2,
+      "name": "Samsung Galaxy S24 Ultra 256GB",
+      "nameEn": "Samsung Galaxy S24 Ultra 256GB",
+      "price": 24990000,
+      "stock": 30,
+      "categoryId": 4,
+      "category": {
+        "id": 4,
+        "name": "Samsung",
+        "nameEn": "Samsung",
+        "parentId": 1,
+        "childrenIds": []
+      },
+      "isActive": true,
+      ...
+    }
+  ],
+  "total": 16,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 2
+}
+```
+
+**Ví dụ sử dụng:**
+
+**1. Lấy tất cả sản phẩm của một parent category:**
+```javascript
+// Lấy tất cả sản phẩm thuộc "Điện thoại" (parent ID = 1)
+const response = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    parentCategoryId: 1,
+    isActive: true,
+    page: 1,
+    limit: 20
+  })
+});
+
+const { data: products } = await response.json();
+// Kết quả: Tất cả sản phẩm của iPhone, Samsung, Xiaomi, OPPO, ... (các children của "Điện thoại")
+```
+
+**2. Filter products theo parent category với các điều kiện khác:**
+```javascript
+// Lấy sản phẩm của "Điện thoại" với giá từ 10M đến 30M, còn hàng
+const response = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    parentCategoryId: 1,
+    minPrice: 10000000,
+    maxPrice: 30000000,
+    inStock: true,
+    isActive: true,
+    sortBy: 'price',
+    sortOrder: 'ASC',
+    page: 1,
+    limit: 20
+  })
+});
+
+const { data: products } = await response.json();
+```
+
+**3. Tìm kiếm sản phẩm trong một parent category:**
+```javascript
+// Tìm kiếm "iPhone" trong tất cả sản phẩm của "Điện thoại"
+const response = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    parentCategoryId: 1,
+    name: "iPhone",
+    isActive: true
+  })
+});
+
+const { data: products } = await response.json();
+// Kết quả: Tất cả sản phẩm iPhone (thuộc child category "iPhone" của parent "Điện thoại")
+```
+
+**4. So sánh `categoryId` vs `parentCategoryId`:**
+
+```javascript
+// Cách 1: Filter theo child category cụ thể (categoryId)
+const response1 = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    categoryId: 3  // Chỉ lấy sản phẩm của "iPhone" (child category)
+  })
+});
+// Kết quả: Chỉ có sản phẩm iPhone
+
+// Cách 2: Filter theo parent category (parentCategoryId)
+const response2 = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    parentCategoryId: 1  // Lấy sản phẩm của tất cả children của "Điện thoại"
+  })
+});
+// Kết quả: Sản phẩm của iPhone, Samsung, Xiaomi, OPPO, ... (tất cả children)
+
+// Cách 3: Có cả hai (ưu tiên categoryId)
+const response3 = await fetch('/api/v1/products/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    categoryId: 3,        // Ưu tiên - chỉ lấy sản phẩm của "iPhone"
+    parentCategoryId: 1  // Bị bỏ qua
+  })
+});
+// Kết quả: Chỉ có sản phẩm iPhone (giống như cách 1)
+```
+
+**5. Sử dụng trong Frontend - Filter Products theo Parent Category:**
+
+```javascript
+// Component: ProductListPage
+const [selectedParentId, setSelectedParentId] = useState(null);
+const [parentOptions, setParentOptions] = useState([]);
+const [products, setProducts] = useState([]);
+
+// Load parent categories cho dropdown filter
+useEffect(() => {
+  fetch('/api/v1/categories/parents?includeInactive=false')
+    .then(res => res.json())
+    .then(result => setParentOptions(result.data));
+}, []);
+
+// Load products khi filter thay đổi
+useEffect(() => {
+  const fetchProducts = async () => {
+    const body = {
+      isActive: true,
+      page: 1,
+      limit: 20
+    };
+    
+    // Nếu có chọn parent category, thêm parentCategoryId vào body
+    if (selectedParentId) {
+      body.parentCategoryId = selectedParentId;
+    }
+    
+    const response = await fetch('/api/v1/products/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    
+    const result = await response.json();
+    setProducts(result.data);
+  };
+  
+  fetchProducts();
+}, [selectedParentId]);
+
+// Render
+return (
+  <div>
+    {/* Dropdown filter theo parent category */}
+    <select 
+      value={selectedParentId || ''} 
+      onChange={(e) => setSelectedParentId(e.target.value ? Number(e.target.value) : null)}
+    >
+      <option value="">Tất cả danh mục</option>
+      {parentOptions.map(parent => (
+        <option key={parent.id} value={parent.id}>{parent.name}</option>
+      ))}
+    </select>
+    
+    {/* Hiển thị products */}
+    <div className="product-grid">
+      {products.map(product => (
+        <div key={product.id} className="product-card">
+          <h3>{product.name}</h3>
+          <p>Giá: {product.price.toLocaleString('vi-VN')} VNĐ</p>
+          <p>Danh mục: {product.category?.name}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+```
+
+**Lưu ý:**
+- Filter `parentCategoryId` rất hữu ích khi muốn hiển thị tất cả sản phẩm của một nhóm danh mục (ví dụ: tất cả điện thoại, tất cả laptop)
+- Phù hợp cho trang danh sách sản phẩm với filter theo category cha
+- Có thể kết hợp với các filter khác như `minPrice`, `maxPrice`, `inStock`, `name`, ...
+
 ## Error Codes
 
 | Status Code | Mô tả |
