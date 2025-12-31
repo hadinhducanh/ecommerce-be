@@ -6,6 +6,7 @@ import (
 	"ecommerce-be/config"
 	"ecommerce-be/database"
 	"ecommerce-be/models"
+	"ecommerce-be/utils"
 )
 
 func main() {
@@ -19,6 +20,10 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer database.CloseDB()
+
+	// Seed Admin User
+	log.Println("👤 Starting to seed admin user...")
+	seedAdminUser()
 
 	log.Println("🌱 Starting to seed categories...")
 
@@ -257,4 +262,49 @@ func createOrUpdateCategoryChild(parentID, childID uint) {
 // Helper function để tạo string pointer
 func stringPtr(s string) *string {
 	return &s
+}
+
+// seedAdminUser tạo tài khoản admin mặc định
+func seedAdminUser() {
+	adminEmail := "admin@ecommerce.com"
+	
+	// Kiểm tra xem admin đã tồn tại chưa
+	var existingAdmin models.User
+	result := database.DB.Where("email = ?", adminEmail).First(&existingAdmin)
+	
+	if result.Error == nil {
+		log.Printf("ℹ️  Admin user already exists: %s (ID: %d)", adminEmail, existingAdmin.ID)
+		return
+	}
+	
+	// Hash mật khẩu
+	hashedPassword, err := utils.HashPassword("1")
+	if err != nil {
+		log.Printf("❌ Failed to hash password: %v", err)
+		return
+	}
+	
+	// Tạo admin user
+	admin := models.User{
+		Email:           adminEmail,
+		Password:        hashedPassword,
+		Name:            "Administrator",
+		Role:            "admin",
+		IsActive:        true,
+		IsEmailVerified: true,
+		IsFirstLogin:    false,
+		Phone:           stringPtr("0123456789"),
+		Gender:          stringPtr("other"),
+	}
+	
+	if err := database.DB.Create(&admin).Error; err != nil {
+		log.Printf("❌ Failed to create admin user: %v", err)
+		return
+	}
+	
+	log.Printf("✅ Admin user created successfully!")
+	log.Printf("   📧 Email: %s", adminEmail)
+	log.Printf("   🔑 Password: 1")
+	log.Printf("   👤 Role: admin")
+	log.Printf("   🆔 ID: %d", admin.ID)
 }

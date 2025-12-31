@@ -30,6 +30,7 @@ func SetupRoutes(r *gin.Engine) {
 		SetupCloudinaryRoutes(api)
 		SetupUserRoutes(api)
 		SetupCategoryRoutes(api)
-		SetupProductRoutes(api) // Added product routes
+		SetupProductRoutes(api)
+		SetupCartRoutes(api) // Cart routes
 	}
 }

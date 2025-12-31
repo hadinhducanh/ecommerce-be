@@ -568,3 +568,26 @@ func (s *ProductService) invalidateProductCacheByID(id uint) {
 	// Xóa cache của product này (tất cả các language và includeInactive variants)
 	cache.DeletePattern(fmt.Sprintf("%s%d:*", cache.ProductKeyPrefix, id))
 }
+
+// MapProductToResponse converts Product model to ProductResponse DTO
+func MapProductToResponse(product *models.Product) *dto.ProductResponse {
+	return &dto.ProductResponse{
+		ID:            product.ID,
+		Name:          product.Name,
+		NameEn:        product.NameEn,
+		Description:   product.Description,
+		DescriptionEn: product.DescriptionEn,
+		Price:         product.Price,
+		Stock:         product.Stock,
+		Image:         product.Image,
+		Images:        product.Images,
+		Sold:          product.Sold,
+		Rating:        product.Rating,
+		ReviewCount:   product.ReviewCount,
+		IsActive:      product.IsActive,
+		SKU:           product.SKU,
+		CategoryID:    product.CategoryID,
+		CreatedAt:     product.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:     product.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
