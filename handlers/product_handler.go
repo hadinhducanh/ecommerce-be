@@ -486,3 +486,80 @@ func (h *ProductHandler) HardDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// SearchSuggestions lấy danh sách gợi ý tìm kiếm dựa trên query (Public)
+// @Summary Lấy gợi ý tìm kiếm
+// @Description Lấy danh sách gợi ý tìm kiếm dựa trên query string
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param query query string true "Từ khóa tìm kiếm"
+// @Param language query string false "Ngôn ngữ (vi/en)" default(vi)
+// @Param limit query int false "Số lượng suggestions" default(10)
+// @Success 200 {object} dto.SearchSuggestionsResponse
+// @Failure 400 {object} map[string]string
+// @Router /api/v1/products/search-suggestions [get]
+func (h *ProductHandler) SearchSuggestions(c *gin.Context) {
+	query := c.Query("query")
+	language := c.DefaultQuery("language", "vi")
+	limitStr := c.DefaultQuery("limit", "10")
+
+	limit := 10
+	if l, err := strconv.Atoi(limitStr); err == nil {
+		limit = l
+	}
+
+	suggestions, err := h.productService.GetSearchSuggestions(query, language, limit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	response := dto.SearchSuggestionsResponse{
+		Success: true,
+		Data:    suggestions,
+		Total:   len(suggestions),
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// PopularSearches lấy danh sách từ khóa tìm kiếm phổ biến (Public)
+// @Summary Lấy từ khóa tìm kiếm phổ biến
+// @Description Lấy danh sách từ khóa tìm kiếm phổ biến nhất
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param language query string false "Ngôn ngữ (vi/en)" default(vi)
+// @Param limit query int false "Số lượng searches" default(10)
+// @Success 200 {object} dto.PopularSearchesResponse
+// @Failure 400 {object} map[string]string
+// @Router /api/v1/products/popular-searches [get]
+func (h *ProductHandler) PopularSearches(c *gin.Context) {
+	language := c.DefaultQuery("language", "vi")
+	limitStr := c.DefaultQuery("limit", "10")
+
+	limit := 10
+	if l, err := strconv.Atoi(limitStr); err == nil {
+		limit = l
+	}
+
+	searches, err := h.productService.GetPopularSearches(language, limit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	response := dto.PopularSearchesResponse{
+		Success: true,
+		Data:    searches,
+		Total:   len(searches),
+	}
+
+	c.JSON(http.StatusOK, response)
+}

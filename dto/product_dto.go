@@ -112,3 +112,32 @@ type DeleteProductResponse struct {
 	Message string `json:"message"`
 }
 
+// Search Suggestions DTOs
+type SearchSuggestion struct {
+	Text  string `json:"text"`              // Text hiển thị
+	Type  string `json:"type"`              // "product" hoặc "category"
+	Count int    `json:"count,omitempty"`   // Số lượng sản phẩm/danh mục
+}
+
+type SearchSuggestionsResponse struct {
+	Success bool                 `json:"success"`
+	Data    []SearchSuggestion   `json:"data"`
+	Total   int                  `json:"total"`
+	Message *string              `json:"message,omitempty"`
+	Error   *string              `json:"error,omitempty"`
+}
+
+// Popular Searches DTOs
+type PopularSearch struct {
+	Text  string `json:"text"`  // Từ khóa tìm kiếm
+	Count int    `json:"count"` // Số lượng tìm kiếm
+}
+
+type PopularSearchesResponse struct {
+	Success bool            `json:"success"`
+	Data    []PopularSearch `json:"data"`
+	Total   int             `json:"total"`
+	Message *string         `json:"message,omitempty"`
+	Error   *string         `json:"error,omitempty"`
+}
+

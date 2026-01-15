@@ -20,6 +20,8 @@ func SetupProductRoutes(api *gin.RouterGroup) {
 	{
 		// Public routes (không yêu cầu auth)
 		products.POST("/search", productHandler.Search)
+		products.GET("/search-suggestions", productHandler.SearchSuggestions)
+		products.GET("/popular-searches", productHandler.PopularSearches)
 		products.GET("/:id", productHandler.FindOne)
 
 		// Admin only routes (yêu cầu auth + admin role)

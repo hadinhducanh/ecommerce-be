@@ -591,3 +591,95 @@ func MapProductToResponse(product *models.Product) *dto.ProductResponse {
 		UpdatedAt:     product.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
+
+// GetSearchSuggestions lấy danh sách gợi ý tìm kiếm dựa trên query
+func (s *ProductService) GetSearchSuggestions(query string, language string, limit int) ([]dto.SearchSuggestion, error) {
+	if limit <= 0 || limit > 20 {
+		limit = 10
+	}
+
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []dto.SearchSuggestion{}, nil
+	}
+
+	var suggestions []dto.SearchSuggestion
+
+	// Tìm sản phẩm phù hợp
+	var products []models.Product
+	nameField := "name"
+	if language == "en" {
+		nameField = "name_en"
+	}
+
+	database.DB.Where("is_active = ? AND ? ILIKE ?", true, nameField+" LIKE ?", "%"+query+"%").
+		Limit(limit / 2).
+		Find(&products)
+
+	// Thêm product suggestions
+	for _, product := range products {
+		productName := product.Name
+		if language == "en" && product.NameEn != nil {
+			productName = *product.NameEn
+		}
+
+		suggestions = append(suggestions, dto.SearchSuggestion{
+			Text:  productName,
+			Type:  "product",
+			Count: 1, // TODO: có thể update thêm count field
+		})
+	}
+
+	// Tìm danh mục phù hợp
+	var categories []models.Category
+	database.DB.Where("is_active = ? AND name ILIKE ?", true, "%"+query+"%").
+		Limit(limit / 2).
+		Find(&categories)
+
+	// Thêm category suggestions
+	for _, category := range categories {
+		suggestions = append(suggestions, dto.SearchSuggestion{
+			Text:  category.Name,
+			Type:  "category",
+			Count: 1, // TODO: có thể update thêm count field
+		})
+	}
+
+	// Giới hạn tổng số suggestions
+	if len(suggestions) > limit {
+		suggestions = suggestions[:limit]
+	}
+
+	return suggestions, nil
+}
+
+// GetPopularSearches lấy danh sách từ khóa tìm kiếm phổ biến
+func (s *ProductService) GetPopularSearches(language string, limit int) ([]dto.PopularSearch, error) {
+	if limit <= 0 || limit > 20 {
+		limit = 10
+	}
+
+	var searches []dto.PopularSearch
+
+	// Lấy tất cả sản phẩm active
+	var products []models.Product
+	database.DB.Where("is_active = ?", true).
+		Order("sold DESC").
+		Limit(limit).
+		Find(&products)
+
+	// Tạo popular search list từ products
+	for _, product := range products {
+		productName := product.Name
+		if language == "en" && product.NameEn != nil {
+			productName = *product.NameEn
+		}
+
+		searches = append(searches, dto.PopularSearch{
+			Text:  productName,
+			Count: product.Sold,
+		})
+	}
+
+	return searches, nil
+}

@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/gomail.v2"
 )
@@ -48,6 +49,15 @@ func getEnvInt(key string, defaultValue int) int {
 
 // SendOtpEmail gửi OTP qua email
 func (s *EmailService) SendOtpEmail(email, otp, name string) error {
+	// Log OTP ra terminal để test
+	fmt.Printf("\n📧 ===== OTP EMAIL =====\n")
+	fmt.Printf("📨 Gửi đến: %s\n", email)
+	fmt.Printf("👤 Người nhận: %s\n", name)
+	fmt.Printf("🔑 Mã OTP: %s\n", otp)
+	fmt.Printf("⏰ Thời gian: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("⏳ Hết hạn sau: 5 phút\n")
+	fmt.Printf("========================\n\n")
+
 	// Tạo email message
 	m := gomail.NewMessage()
 	m.SetHeader("From", s.fromEmail)
